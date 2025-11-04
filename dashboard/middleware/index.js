@@ -125,7 +125,22 @@ module.exports = function (checkAuthConfigDashboardOfThread) {
 						message: "Bạn không phải là admin của bot"
 					});
 
-				req.flash("errors", { msg: "Bạn không phải là admin của bot" });
+				req.flash("errors", {
+					msg: "[!] Bạn không phải là admin của bot"
+				});
+				return res.redirect("/dashboard");
+			}
+			next();
+		},
+
+		checkAuthConfigDashboardOfThread(threadData, userID) {
+			if (!threadData || !threadData.adminIDs) return false;
+			return threadData.adminIDs.includes(userID) || 
+			       (threadData.data && threadData.data.dashboardAccess && 
+			        threadData.data.dashboardAccess.includes(userID));
+		}
+	};
+};h("errors", { msg: "Bạn không phải là admin của bot" });
 				return res.redirect("/dashboard");
 			}
 			next();

@@ -1,4 +1,3 @@
-
 const express = require("express");
 const http = require("http");
 const path = require("path");
@@ -68,15 +67,12 @@ module.exports = async (api) => {
   const verifyfbidRoute = require('./routes/verifyfbid');
   const apiRoute = require('./routes/api');
 
-  // Import middleware
-  const { isAuthenticated, isVeryfiUserIDFacebook } = require('./middleware');
-
   // Use routes
   app.use('/login', loginRoute);
   app.use('/register', registerRoute);
   app.use('/dashboard', dashboardRoute({
-    isAuthenticated,
-    isVeryfiUserIDFacebook,
+    isAuthenticated: require('./middleware').isAuthenticated,
+    isVeryfiUserIDFacebook: require('./middleware').isVeryfiUserIDFacebook,
     checkHasAndInThread: require('./middleware').checkHasAndInThread,
     threadsData: global.db.threadsData,
     checkAuthConfigDashboardOfThread: require('./middleware').checkAuthConfigDashboardOfThread,
@@ -109,11 +105,11 @@ module.exports = async (api) => {
   });
 
   // Stats route
-  app.get('/stats', [isAuthenticated], async (req, res) => {
+  app.get('/stats', [require('./middleware').isAuthenticated], async (req, res) => {
     try {
       const totalThreads = await global.db.threadsData.getAll();
       const totalUsers = await global.db.usersData.getAll();
-      
+
       res.render('stats', {
         title: 'Statistics - GoatBot Dashboard',
         totalThreads: totalThreads.length,
