@@ -1,95 +1,103 @@
-const axios = require("axios");
-const fs = require("fs");
-const yts = require("yt-search");
-const path = require("path");
-const cacheDir = path.join(__dirname, "/cache");
-
-if (!fs.existsSync(cacheDir)) {
-  fs.mkdirSync(cacheDir, { recursive: true });
-}
+const axios = require('axios');
+const fs = require('fs-extra');
+const path = require('path');
 
 module.exports = {
- config: {
-  name: "sing",
-  version: "2.0",
-  author: "Team Calyx",
-  description: { en: "Search and download audio from YouTube" },
-  category: "media",
-  guide: { en: "{pn} <search term>: search YouTube and download the song" }
- },
+  config: {
+    name: 'sing',
+    version: '1.0',
+    author: 'Farhan',
+    countDown: 5,
+    prefix: true,
+    description: 'Search and play music from YouTube, auto selects most viewed.',
+    category: 'media',
+    guide: {
+      en: '{pn}sing <music name>'
+    }
+  },
 
- onStart: async ({ api, args, event }) => {
-  if (!args.length) {
-   return api.sendMessage("❌ Use '{prefix} sing <search term>'.", event.threadID, event.messageID);
+  onStart: async ({ api, event, args }) => {
+    const threadID = event.threadID;
+    const messageID = event.messageID;
+    const query = args.join(' ').trim();
+
+    if (!query) {
+      return api.sendMessage('❌ Please provide a music name. Example: sing Starboy', threadID, messageID);
+    }
+
+    let statusMsg;
+    try {
+   
+      statusMsg = await new Promise((resolve, reject) => {
+        api.sendMessage('🔎 Searching the music...', threadID, (err, info) => {
+          if (err) reject(err);
+          else resolve(info);
+        }, messageID);
+      });
+
+   
+      const searchRes = await axios.get(`https://hridoy-apis.vercel.app/search/youtube?query=${encodeURIComponent(query)}&count=5&apikey=hridoyXQC`);
+      const results = searchRes.data && searchRes.data.result;
+      if (!Array.isArray(results) || results.length === 0) {
+        await api.editMessage('❌ No music found.', statusMsg.messageID);
+        return;
+      }
+
+
+      let mostViewed = results[0];
+      for (const vid of results) {
+        if (vid.views > mostViewed.views) mostViewed = vid;
+      }
+
+      await api.editMessage('⬇️ Downloading...', statusMsg.messageID);
+
+      const ytmp3Res = await axios.get(`https://hridoy-apis.vercel.app/downloader/ytmp4?url=${encodeURIComponent(mostViewed.url)}&format=mp3&apikey=hridoyXQC`);
+      const downloadUrl = ytmp3Res.data?.result?.download;
+      const musicTitle = ytmp3Res.data?.result?.title || mostViewed.title;
+      const musicAuthor = mostViewed.author;
+      const views = mostViewed.views?.toLocaleString?.() || mostViewed.views || "N/A";
+
+      if (!downloadUrl) {
+        await api.editMessage('❌ Failed to get music download link.', statusMsg.messageID);
+        return;
+      }
+
+    
+      await api.editMessage('📤 Sending...', statusMsg.messageID);
+
+    
+      const cacheDir = path.join(__dirname, 'cache');
+      await fs.ensureDir(cacheDir);
+      const filePath = path.join(cacheDir, `sing_${Date.now()}.mp3`);
+
+      const audioRes = await axios.get(downloadUrl, { responseType: 'arraybuffer', timeout: 60000 });
+      await fs.writeFile(filePath, Buffer.from(audioRes.data));
+
+     
+      await new Promise((resolve, reject) => {
+        api.sendMessage({
+          body: `🎶 ${musicTitle}\n👤 Author: ${musicAuthor}\n👁️ Views: ${views}`,
+          attachment: fs.createReadStream(filePath)
+        }, threadID, (err) => {
+          fs.unlink(filePath).catch(() => {});
+          if (err) reject(err);
+          else resolve();
+        }, messageID);
+      });
+
+     
+      if (statusMsg?.messageID) {
+        await api.unsendMessage(statusMsg.messageID);
+      }
+
+    } catch (error) {
+      console.error('[sing] Error:', error);
+      if (statusMsg?.messageID) {
+        await api.editMessage('❌ Error occurred while processing your request.', statusMsg.messageID);
+        setTimeout(() => api.unsendMessage(statusMsg.messageID), 10000);
+      } else {
+        api.sendMessage('❌ Error occurred while processing your request.', threadID, messageID);
+      }
+    }
   }
-
-  try {
-   api.setMessageReaction("⏳", event.messageID, () => {}, true);
-
-   const search = await yts(args.join(" "));
-   const video = search.videos[0];
-   if (!video) {
-    api.setMessageReaction("⭕", event.messageID, () => {}, true);
-    return api.sendMessage(`⭕ No results for: ${args.join(" ")}`, event.threadID, event.messageID);
-   }
-
-   const BASE_URL = await getApiUrl();
-   if (!BASE_URL) {
-    api.setMessageReaction("❌", event.messageID, () => {}, true);
-    return api.sendMessage("❌ Could not fetch API URL.", event.threadID, event.messageID);
-   }
-
-   const response = await axios.get(`${BASE_URL}/api/ytmp3?url=${encodeURIComponent(video.url)}`);
-   const downloadUrl = response.data?.download_url;
-
-   if (!downloadUrl) {
-    api.setMessageReaction("❌", event.messageID, () => {}, true);
-    return api.sendMessage("❌ Could not get MP3 link. Try again later.", event.threadID, event.messageID);
-   }
-
-   const audioPath = path.join(cacheDir, `ytb_audio_${video.videoId}.mp3`);
-   await downloadFile(downloadUrl, audioPath);
-
-   api.setMessageReaction("✅", event.messageID, () => {}, true);
-   await api.sendMessage(
-    {
-     body: `🎵 Song Downloaded Successfully:\n• Title: ${video.title}\n• Channel: ${video.author.name}`,
-     attachment: fs.createReadStream(audioPath),
-    },
-    event.threadID,
-    () => fs.unlinkSync(audioPath),
-    event.messageID
-   );
-  } catch (e) {
-   console.error("Error in sing command:", e.message || e);
-   api.setMessageReaction("❌", event.messageID, () => {}, true);
-   api.sendMessage("❌ Error occurred while downloading. Try again later.", event.threadID, event.messageID);
-  }
- },
 };
-
-async function downloadFile(url, filePath) {
- const response = await axios({
-  url,
-  method: "GET",
-  responseType: "stream",
- });
- const writer = fs.createWriteStream(filePath);
- response.data.pipe(writer);
- return new Promise((resolve, reject) => {
-  writer.on("finish", resolve);
-  writer.on("error", reject);
- });
-}
-
-async function getApiUrl() {
- try {
-  const { data } = await axios.get(
-   "https://raw.githubusercontent.com/romeoislamrasel/romeobot/refs/heads/main/api.json"
-  );
-  return data.api;
- } catch (error) {
-  console.error("Error fetching API URL:", error);
-  return null;
- }
-}

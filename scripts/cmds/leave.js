@@ -1,30 +1,28 @@
-const axios = require("axios");
-const fs = require("fs-extra");
-const request = require("request");
+const fs = require("fs");
+const path = require("path");
+
 module.exports = {
   config: {
     name: "leave",
-    aliases: ["out"],
-    version: "1.0",
-    author: "Sandy",
-    countDown: 5,
+    aliases: ["l"],
+    version: "2.1",
+    author: "Sandy | Fixed by Farhan",
     role: 2,
-    shortDescription: "bot will leave gc",
-    longDescription: "",
-    category: "owner",
-    guide: {
-      vi: "{pn} [tid,blank]",
-      en: "{pn} [tid,blank]"
-    }
+    shortDescription: "Bot will leave the group",
+    category: "admin"
   },
 
-  onStart: async function ({ api,event,args, message }) {
- var id;
- if (!args.join(" ")) {
- id = event.threadID;
- } else {
- id = parseInt(args.join(" "));
- }
- return api.sendMessage('𝙈𝙮 𝙇𝙤𝙧𝙙, Im Leaving In This Group, Thankyou For Using Me! 😙', id, () => api.removeUserFromGroup(api.getCurrentUserID(), id))
-    }
-  };
+  onStart: async ({ api, event, args, message }) => {
+    const threadID = args.length ? parseInt(args.join(" ")) : event.threadID;
+
+    const text = "👋 Goodbye guys, I'm leaving this group!";
+
+    // Send the specific leave.mp4 from assets folder
+    const videoPath = path.join(__dirname, "../../assets/leave.mp4");
+
+    return message.reply({
+      body: text,
+      attachment: fs.createReadStream(videoPath)
+    }, () => api.removeUserFromGroup(api.getCurrentUserID(), threadID));
+  }
+};

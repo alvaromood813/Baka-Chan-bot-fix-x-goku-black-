@@ -1,61 +1,63 @@
-const DIG = require("discord-image-generation");
+const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
 
 module.exports = {
     config: {
-        name: "gay",
-        aliases: ["gay"],
-        version: "1.2",
-        author: "Rômeo",
-        countDown: 5,
-        role: 0,
-        shortDescription: "rainbowify someone's avatar",
-        longDescription: "",
-        category: "fun",
-        guide: "{pn} [@mention]"
+        name: 'gay',
+        version: '1.1',
+        author: 'Farhan',
+        countDown: 10,
+        prefix: true,
+        groupAdminOnly: false,
+        description: 'A fun command to generate a colorful overlay of a user\'s avatar.',
+        category: 'fun',
+        guide: {
+            en: '   {pn}gay [/@mention|uid|reply]'
+        },
     },
+    onStart: async ({ api, event }) => {
+        const { senderID, mentions, messageReply } = event;
+        let targetID = senderID;
 
-    onStart: async function ({ message, event, args }) {
-        const mentions = Object.keys(event.mentions);
-        const senderID = event.senderID;
+      
+        if (Object.keys(mentions).length > 0) {
+            targetID = Object.keys(mentions)[0];
+        } else if (event.messageReply && event.messageReply.senderID) {
+            targetID = event.messageReply.senderID;
+        } else if (event.body.split(' ').length > 1) {
+            const uid = event.body.split(' ')[1].replace(/[^0-9]/g, '');
+            if (uid.length === 15 || uid.length === 16) targetID = uid;
+        }
 
-        const targetID = event.type === "message_reply"
-            ? event.messageReply.senderID
-            : mentions.length > 0
-                ? mentions[0]
-                : senderID;
+        const userInfo = await api.getUserInfo(targetID);
+        const name = userInfo[targetID]?.name || 'Someone';
+        const imageUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379|c1e620fa708a1d5696fb991c1bde5662`;
 
-        const targetName = event.type === "message_reply"
-            ? event.messageReply.senderName
-            : mentions.length > 0
-                ? Object.values(event.mentions)[0]
-                : "You";
+        const apiUrl = `https://sus-apis.onrender.com/api/pride-overlay?image=${encodeURIComponent(imageUrl)}`;
 
-        const pth = await makeGay(targetID);
+        try {
+            console.log(`[API Request] Sending to: ${apiUrl}`);
+            const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+            console.log(`[API Response] Status: ${response.status}, Status Text: ${response.statusText}`);
 
-        await message.reply({
-            body: `Hey 🏳️‍🌈 `,
-            attachment: fs.createReadStream(pth)
-        });
+            const cacheDir = path.join(__dirname, 'cache');
+            if (!fs.existsSync(cacheDir)) {
+                fs.mkdirSync(cacheDir);
+            }
+            const imagePath = path.join(cacheDir, `gay_${targetID}_${Date.now()}.png`);
+            fs.writeFileSync(imagePath, Buffer.from(response.data, 'binary'));
 
-        try { fs.unlinkSync(pth); } catch (e) { /* ignore */ }
-    }
+            const messageBody = `Look, I found a gay @${name} 🌈🤣`;
+            api.sendMessage({
+                body: messageBody,
+                mentions: [{ tag: `@${name}`, id: targetID }],
+                attachment: fs.createReadStream(imagePath)
+            }, event.threadID, () => fs.unlinkSync(imagePath));
+
+        } catch (error) {
+            console.error("Error generating or sending gay image:", error);
+            api.sendMessage("Sorry, I couldn't generate the gay image right now.", event.threadID);
+        }
+    },
 };
-
-async function getAvatarBuffer(uid) {
-    const url = `https://graph.facebook.com/${uid}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    return Buffer.from(response.data, 'binary');
-}
-
-async function makeGay(uid) {
-    const avatar = await getAvatarBuffer(uid);
-    const img = await new DIG.Gay().getImage(avatar);
-    const tmpDir = os.tmpdir();
-    const pth = path.join(tmpDir, `gay_${Date.now()}_${Math.floor(Math.random()*10000)}.png`);
-    fs.writeFileSync(pth, img);
-    return pth;
-}
