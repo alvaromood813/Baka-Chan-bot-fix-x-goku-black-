@@ -12,13 +12,14 @@
 
 ## Introduction
 
-### 🆕 **Latest Updates - v2.0 Refactor**
-- **🔧 Refactor(goat)**: Major code cleanup and optimization
-- **📧 Gmail OAuth Removal**: Removed deprecated Gmail OAuth mail setup dependencies
-- **🧹 Dependencies Cleanup**: Deleted Google API and nodemailer dependencies for mail sending
-- **🛡️ Better Error Handling**: Added error handling for failure to fetch the latest version
-- **📁 Script Simplification**: Simplified login script requiring based on environment
-- **🎯 Performance**: Improved overall bot performance and reduced memory footprint
+### 🆕 **Latest Updates - v2.0.0 (Baka-Chan Edition)**
+- **✨ Custom Branding**: Beautiful console UI with "Bot made by Gtajisan aka Farhan" credits
+- **🛡️ Enhanced Stability**: Improved fb-chat-api with auto-reconnect and better error handling
+- **🎨 Styled Login**: Gradient-colored ASCII art banner with custom branding
+- **⚙️ Better Configuration**: Simplified admin UID setup and cookie-based authentication
+- **📚 Complete Documentation**: Comprehensive README with deployment guides
+- **🔧 Updated Dependencies**: Based on Team-Calyx GoatBot-V2 with latest improvements
+- **🎯 24/7 Ready**: Optimized for continuous operation on cloud platforms
 
 #### Join us in [Messenger Group](https://m.me/j/AbZ6Bj-uS3npg7di/)🍪
 ###### If you encounter any issues or difficulties, don't hesitate to reach out and ask for assistance here. Our team is here to help you with any problems you may face.
@@ -50,17 +51,44 @@
 - So, I recommend using a clone account (one that you're willing to throw away at any time)
 - ***I am not responsible for any problems that may arise from using this bot.***
 
-## 🚧 **Requirement**
-- Node.js 16.x [Download](https://nodejs.org/dist/v16.20.0) | [Home](https://nodejs.org/en/download/) | [Other versions](https://nodejs.org/en/download/releases/)
-- Knowledge of **programming**, javascript, nodejs, unofficial facebook api
+## 🚧 **Requirements**
+- **Node.js 20.x** or higher ([Download](https://nodejs.org/en/download/))
+- A **Facebook account** (preferably a clone/secondary account)
+- **Facebook cookies** from your account for login
+- Basic knowledge of **JavaScript/Node.js** (recommended)
 
-## 📝 **Tutorial**
-Tutorial has been uploaded on YouTube
-- For mobile phone: https://www.youtube.com/watch?v=grVeZ76HlgA
-- For vps/windows: https://www.youtube.com/watch?v=uCbSYNQNEwY
-  
-Summary instructions:
-- See [here](https://github.com/ntkhang03/Goat-Bot-V2/blob/main/STEP_INSTALL.md)
+## 📝 **Tutorial - Cookie Setup**
+
+### How to Get Facebook Cookies:
+
+**Method 1: Using Browser Extension (Recommended)**
+1. Install a cookie extension:
+   - Chrome/Edge: [EditThisCookie](https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg)
+   - Firefox: [Cookie-Editor](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
+2. Log into Facebook with your bot account
+3. Click the extension icon → Export cookies
+4. Copy all cookies in JSON format
+5. Paste into `account.txt` (replace all existing content)
+
+**Method 2: Using Developer Tools**
+1. Log into Facebook
+2. Press F12 to open Developer Tools
+3. Go to "Application" or "Storage" tab
+4. Find "Cookies" → "https://www.facebook.com"
+5. Copy important cookies: `sb`, `datr`, `c_user`, `xs`, `fr`
+6. Format as JSON array in `account.txt`
+
+**Important Notes:**
+- Make sure c_user cookie matches your Facebook UID
+- Cookies expire, refresh them every 7-30 days
+- Use a secondary/clone Facebook account
+- Keep your cookies private and secure
+
+### Quick Start:
+1. Add your Facebook cookies to `account.txt`
+2. Add your Facebook UID to `config.json` under `adminBot`
+3. Run: `npm start`
+4. Bot will connect and start listening for messages!
 
 ## 🔔 **How to get notification when have new update?**
 - Click on the `Watch` button in the upper right corner of the screen and select `Custom` and select `Pull requests` and `Releases` and click `Apply` to get notified when there is a new update.

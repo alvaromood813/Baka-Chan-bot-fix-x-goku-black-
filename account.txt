@@ -1,1 +1,20 @@
-[]
+PASTE YOUR FACEBOOK COOKIES HERE
+
+Instructions:
+1. Export your Facebook cookies using a browser extension like "EditThisCookie" or "Cookie-Editor"
+2. Copy the cookies in one of these formats:
+
+FORMAT 1 - JSON Array (Recommended):
+[
+  {"key":"sb","value":"your_sb_value","domain":"facebook.com","path":"/","hostOnly":false,"creation":"2024-01-01T00:00:00.000Z","lastAccessed":"2024-01-01T00:00:00.000Z"},
+  {"key":"datr","value":"your_datr_value","domain":"facebook.com","path":"/","hostOnly":false,"creation":"2024-01-01T00:00:00.000Z","lastAccessed":"2024-01-01T00:00:00.000Z"},
+  {"key":"c_user","value":"YOUR_USER_ID","domain":"facebook.com","path":"/","hostOnly":false,"creation":"2024-01-01T00:00:00.000Z","lastAccessed":"2024-01-01T00:00:00.000Z"},
+  {"key":"xs","value":"your_xs_value","domain":"facebook.com","path":"/","hostOnly":false,"creation":"2024-01-01T00:00:00.000Z","lastAccessed":"2024-01-01T00:00:00.000Z"}
+]
+
+FORMAT 2 - Cookie String:
+sb=xxx; datr=xxx; c_user=xxx; xs=xxx; fr=xxx;
+
+Important cookies needed: sb, datr, c_user, xs, fr
+
+After adding cookies, replace ALL content in this file with your cookies only (no instructions).
