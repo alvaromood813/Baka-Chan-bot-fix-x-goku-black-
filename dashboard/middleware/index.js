@@ -1,3 +1,4 @@
+
 const { threadsData } = global.db;
 
 function isPostMethod(req) {
@@ -138,12 +139,6 @@ module.exports = function (checkAuthConfigDashboardOfThread) {
 			return threadData.adminIDs.includes(userID) || 
 			       (threadData.data && threadData.data.dashboardAccess && 
 			        threadData.data.dashboardAccess.includes(userID));
-		}
-	};
-};h("errors", { msg: "Bạn không phải là admin của bot" });
-				return res.redirect("/dashboard");
-			}
-			next();
 		}
 	};
 };

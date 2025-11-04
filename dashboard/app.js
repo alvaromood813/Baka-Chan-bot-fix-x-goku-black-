@@ -100,7 +100,7 @@ module.exports = async (api) => {
   // Home route
   app.get('/', (req, res) => {
     res.render('home', {
-      title: 'Home - GoatBot Dashboard'
+      title: 'Home - Baka-Chan Dashboard'
     });
   });
 
@@ -111,18 +111,18 @@ module.exports = async (api) => {
       const totalUsers = await global.db.usersData.getAll();
 
       res.render('stats', {
-        title: 'Statistics - GoatBot Dashboard',
+        title: 'Statistics - Baka-Chan Dashboard',
         totalThreads: totalThreads.length,
         totalUsers: totalUsers.length,
-        botName: global.GoatBot.config.nickNameBot || 'GoatBot'
+        botName: global.GoatBot.config.nickNameBot || 'Baka-Chan'
       });
     } catch (error) {
       console.error('Stats error:', error);
       res.render('stats', {
-        title: 'Statistics - GoatBot Dashboard',
+        title: 'Statistics - Baka-Chan Dashboard',
         totalThreads: 0,
         totalUsers: 0,
-        botName: 'GoatBot'
+        botName: 'Baka-Chan'
       });
     }
   });
@@ -130,7 +130,7 @@ module.exports = async (api) => {
   // Donate route
   app.get('/donate', (req, res) => {
     res.render('donate', {
-      title: 'Donate - GoatBot Dashboard'
+      title: 'Donate - Baka-Chan Dashboard'
     });
   });
 
