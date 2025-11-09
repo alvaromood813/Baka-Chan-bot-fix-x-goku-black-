@@ -53,35 +53,83 @@ module.exports = {
       await this.downloadVideo({ videoUrl, message, event });
     } catch (err) {
       console.error("onChat error:", err);
+const axios = require('axios');
+
+module.exports = {
+  config: {
+    name: 'alldl',
+    version: '6.3',
+    author: 'Farhan',
+    countDown: 2,
+    prefix: true,
+    adminOnly: false,
+    aliases: ['download', 'dl'],
+    description: 'Fetch video URL from many platforms (TikTok, Instagram, YouTube, Facebook…) using universal API.',
+    category: 'media',
+    guide: {
+      en: '{pn} <url>'
     }
   },
 
-  downloadVideo: async function({ videoUrl, message, event }) {
+  onStart: async function({ message, args, event }) {
+    if (!args[0]) return message.reply("❌ Please provide a video URL.");
+
+    const videoUrl = args.join(" ");
+    if (!videoUrl.startsWith('http')) return message.reply("❌ Invalid URL. Please provide a proper link.");
+
+    await message.reaction("⏳", event.messageID);
+
     try {
-      // Try primary API
-      let apiResponse = null;
-      try {
-        apiResponse = await axios.get(`https://noobs-api.top/dipto/alldl?url=${encodeURIComponent(videoUrl)}`, { timeout: 10000 });
-      } catch {
-        // Fallback API
-        apiResponse = await axios.get(`https://api.akuari.my.id/downloader/all?link=${encodeURIComponent(videoUrl)}`, { timeout: 10000 });
+      const fetchedUrl = await this.fetchVideoURL(videoUrl);
+
+      await message.reaction("✅", event.messageID);
+      return message.reply(`🎬 Video URL fetched:\n${fetchedUrl}`);
+    } catch (err) {
+      await message.reaction("❌", event.messageID);
+      console.error("Fetch error:", err);
+      return message.reply("⚠️ Failed to fetch video. Please check the URL or try again later.");
+    }
+  },
+
+  onChat: async function({ event, message }) {
+    try {
+      const urls = event.body.match(/https?:\/\/[^\s]+/g);
+      if (!urls || urls.length === 0) return;
+
+      const videoUrl = urls[0];
+      if (!videoUrl.startsWith('http')) return;
+
+      await message.reaction("⏳", event.messageID);
+      const fetchedUrl = await this.fetchVideoURL(videoUrl);
+      await message.reaction("✅", event.messageID);
+      return message.reply(`🎬 Video URL fetched:\n${fetchedUrl}`);
+    } catch (err) {
+      await message.reaction("❌", event.messageID);
+      console.error("onChat fetch error:", err);
+    }
+  },
+
+  fetchVideoURL: async function(videoUrl) {
+    try {
+      // Example of universal API usage
+      const apiKey = process.env.UNIVERSAL_DL_API_KEY;  // set your key in env
+      const apiEndpoint = `https://api.apify.com/v2/acts/wilcode~all-social-media-video-downloader/run-sync-get-input?token=${apiKey}`;
+      const payload = {
+        "url": videoUrl
+      };
+      const res = await axios.post(apiEndpoint, payload, { timeout: 15000 });
+
+      if (res.data && res.data.output && res.data.output.downloadUrl) {
+        return res.data.output.downloadUrl;
       }
 
-      const videoData = apiResponse.data;
-      if (!videoData || !videoData.result) throw new Error("Invalid API response");
-
-      // Download file (optional: for Goat bots you can also send as stream)
-      const stream = await global.utils.getStreamFromURL(videoData.result, 'video.mp4');
-
-      message.reaction("✅", event.messageID);
-      message.reply({
-        body: `✓ Download Complete\nTitle: ${videoData.title || 'Video'}\nSource: ${videoUrl}`,
-        attachment: stream
-      });
+      throw new Error("No download URL found from API");
     } catch (err) {
-      message.reaction("❌", event.messageID);
-      console.error("Download error:", err);
-      message.reply("Failed to download video. Please check the URL or try again later.");
+      throw err;
+    }
+  }
+};
+    message.reply("Failed to download video. Please check the URL or try again later.");
     }
   },
 
