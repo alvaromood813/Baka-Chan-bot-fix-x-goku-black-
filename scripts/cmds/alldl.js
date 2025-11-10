@@ -1,123 +1,119 @@
-const axios = require("axios");
-const fs = require("fs-extra");
-const path = require("path");
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
-// Optional base API config (fallback ready)
-const baseApiUrl = async () => {
+async function download({ videoUrl, message, event }) {
+  const apiUrl = `https://neoaz.is-a.dev/api/alldl?url=${encodeURIComponent(videoUrl)}`;
+  
   try {
-    const base = await axios.get(
-      `https://raw.githubusercontent.com/Mostakim0978/D1PT0/refs/heads/main/baseApiUrl.json`
-    );
-    return base.data.api || "https://universaldownloaderapi.vercel.app";
-  } catch {
-    return "https://universaldownloaderapi.vercel.app";
+    const apiResponse = await axios.get(apiUrl);
+    const videoData = apiResponse.data;
+
+    if (!videoData || !videoData.cdnUrl) {
+      throw new Error("Invalid response or missing CDN URL from API.");
+    }
+    
+    const { title, platform, cdnUrl } = videoData;
+
+    const videoStreamResponse = await axios({
+      method: 'get',
+      url: cdnUrl,
+      responseType: 'stream'
+    });
+    
+    const tempFilePath = path.join(__dirname, 'cache', `${Date.now()}_${title.substring(0, 20).replace(/[^a-z0-9]/gi, '_')}.mp4`);
+    
+    if (!fs.existsSync(path.join(__dirname, 'cache'))) {
+        fs.mkdirSync(path.join(__dirname, 'cache'));
+    }
+
+    const writer = fs.createWriteStream(tempFilePath);
+    videoStreamResponse.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    message.reaction("✅", event.messageID);
+
+    // --- UPDATED REPLY BODY (NO BOLDING) ---
+    await message.reply({
+      body: `Title: ${title}\nPlatform: ${platform}\nUrl: ${cdnUrl}`,
+      attachment: fs.createReadStream(tempFilePath)
+    });
+    // ----------------------------------------
+    
+    fs.unlinkSync(tempFilePath);
+
+  } catch (error) {
+    message.reaction("❌", event.messageID);
+    console.error("Download Error:", error.message || error);
+    message.reply("An error occurred during download. Please check the URL and try again.");
+    const tempFilePath = path.join(__dirname, 'cache', `${Date.now()}_temp.mp4`); 
+    if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
-};
+}
 
 module.exports = {
   config: {
     name: "alldl",
-    aliases: ["dl", "download"],
-    version: "2.5",
-    author: "Farhan",
-    countDown: 2,
+    aliases: ["download","dl"],
+    version: "1.8", 
+    author: "makran", 
+    countDown: 5,
     role: 0,
-    category: "MEDIA",
-    description: {
-      en: "Download videos or music from TikTok, YouTube, Instagram, Twitter, Facebook, and more.",
-    },
-    guide: {
-      en: "{pn} <video_url> or reply to a message containing one",
-    },
+    longDescription: "Download Videos from various Sources.",
+    category: "media",
+    guide: { en: { body: "{p}{n} [video link] or reply to a message containing a link." } }
   },
 
-  onStart: async function ({ api, args, event }) {
-    try {
-      const replied = event.messageReply?.body;
-      const inputUrl = replied || args[0];
+  onStart: async function({ message, args, event, threadsData, role }) {
+    let videoUrl = args.join(" ");
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-      if (!inputUrl)
-        return api.setMessageReaction("❌", event.messageID, () => {}, true);
-
-      api.setMessageReaction("⏳", event.messageID, () => {}, true);
-
-      // 🌐 Detect platform automatically
-      const domain = new URL(inputUrl).hostname;
-      let platform = "";
-      if (domain.includes("tiktok")) platform = "tiktok";
-      else if (domain.includes("youtube") || domain.includes("youtu.be"))
-        platform = "youtube";
-      else if (domain.includes("facebook") || domain.includes("fb.watch"))
-        platform = "meta";
-      else if (domain.includes("instagram")) platform = "meta";
-      else if (domain.includes("twitter") || domain.includes("x.com"))
-        platform = "twitter";
-      else if (domain.includes("reddit")) platform = "reddit";
-      else if (domain.includes("pinterest")) platform = "pinterest";
-      else if (domain.includes("threads")) platform = "threads";
-      else if (domain.includes("soundcloud")) platform = "soundcloud";
-      else if (domain.includes("spotify")) platform = "spotify";
-      else if (domain.includes("capcut")) platform = "capcut";
-      else platform = "tiktok"; // default fallback
-
-      // 🧭 Build request URL
-      const apiBase = await baseApiUrl();
-      const requestUrl = `${apiBase}/api/${platform}?url=${encodeURIComponent(
-        inputUrl
-      )}`;
-
-      console.log(`[ALLDL] Platform: ${platform}`);
-      console.log(`[ALLDL] Request → ${requestUrl}`);
-
-      const { data } = await axios.get(requestUrl, { timeout: 30000 });
-      if (!data || !data.success)
-        throw new Error("No valid download link returned from API.");
-
-      // Extract media URL
-      const mediaUrl =
-        data.url ||
-        data.video ||
-        data.video_url ||
-        data.audio ||
-        data.music ||
-        data.result ||
-        data.download ||
-        null;
-
-      if (!mediaUrl)
-        throw new Error("No downloadable media found in API response.");
-
-      // Prepare cache dir
-      const cacheDir = path.join(__dirname, "cache");
-      await fs.ensureDir(cacheDir);
-
-      // Set file extension
-      const ext = mediaUrl.includes(".mp3") ? "mp3" : "mp4";
-      const filePath = path.join(cacheDir, `alldl_${Date.now()}.${ext}`);
-
-      // Download file
-      const file = await axios.get(mediaUrl, { responseType: "arraybuffer" });
-      fs.writeFileSync(filePath, Buffer.from(file.data));
-
-      // Send file
-      api.setMessageReaction("✅", event.messageID, () => {}, true);
-      api.sendMessage(
-        {
-          body: `✅ | Download Complete!\n📱 Platform: ${platform}\n🔗 Source: ${inputUrl}`,
-          attachment: fs.createReadStream(filePath),
-        },
-        event.threadID,
-        () => fs.unlinkSync(filePath),
-        event.messageID
-      );
-    } catch (error) {
-      console.error("[ALLDL ERROR]", error.message);
-      api.setMessageReaction("❎", event.messageID, () => {}, true);
-      api.sendMessage(
-        `❌ Error: ${error.message}`,
-        event.threadID,
-        event.messageID
-      );
+    if ((args[0] === 'chat' && (args[1] === 'on' || args[1] === 'off')) || args[0] === 'on' || args[0] === 'off') {
+      if (role >= 1) {
+        const choice = args[0] === 'on' || args[1] === 'on';
+        await threadsData.set(event.threadID, { data: { autoDownload: choice } });
+        return message.reply(`Auto-download has been turned ${choice ? 'on' : 'off'} for this group.`);
+      } else {
+        return message.reply("You don't have permission to toggle auto-download.");
+      }
     }
+
+    if (!videoUrl) {
+      if (event.messageReply && event.messageReply.body) {
+        const foundURLs = event.messageReply.body.match(urlRegex);
+        if (foundURLs && foundURLs.length > 0) {
+          videoUrl = foundURLs[0];
+        } 
+      }
+    }
+
+    if (!videoUrl || !videoUrl.match(urlRegex)) {
+      return message.reply("No valid URL found. Please provide a video link or reply to a message containing one.");
+    }
+
+    message.reaction("⏳", event.messageID);
+    await download({ videoUrl, message, event });
   },
+
+  onChat: async function({ event, message, threadsData }) {
+    const threadData = await threadsData.get(event.threadID);
+    if (!threadData.data.autoDownload || event.senderID === global.botID) return;
+
+    try {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const foundURLs = event.body.match(urlRegex);
+
+      if (foundURLs && foundURLs.length > 0) {
+        const videoUrl = foundURLs[0];
+        message.reaction("⏳", event.messageID); 
+        await download({ videoUrl, message, event });
+      }
+    } catch (error) {
+      
+    }
+  }
 };
